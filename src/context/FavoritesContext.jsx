@@ -1,29 +1,36 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const FavoritesContext = createContext();
 
 export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState(() => {
-    return JSON.parse(localStorage.getItem("favorites")) || [];
+    const stored = localStorage.getItem("favorites");
+    return stored ? JSON.parse(stored) : [];
   });
 
-  useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-  }, [favorites]);
-
   const toggleFavorite = (country) => {
-    setFavorites((prev) =>
-      prev.find((c) => c.cca3 === country.cca3)
+    setFavorites((prev) => {
+      const exists = prev.find((c) => c.cca3 === country.cca3);
+      const updated = exists
         ? prev.filter((c) => c.cca3 !== country.cca3)
-        : [...prev, country]
-    );
+        : [...prev, country];
+
+      localStorage.setItem("favorites", JSON.stringify(updated));
+      return updated;
+    });
   };
 
+  const isFavorite = (cca3) => favorites.some((c) => c.cca3 === cca3);
+
   return (
-    <FavoritesContext.Provider value={{ favorites, toggleFavorite }}>
+    <FavoritesContext.Provider value={{ favorites, toggleFavorite, isFavorite }}>
       {children}
     </FavoritesContext.Provider>
   );
 };
 
-export const useFavorites = () => useContext(FavoritesContext);
+export const useFavorites = () => {
+  const context = useContext(FavoritesContext);
+  if (!context) throw new Error("useFavorites must be used within FavoritesProvider");
+  return context;
+};
